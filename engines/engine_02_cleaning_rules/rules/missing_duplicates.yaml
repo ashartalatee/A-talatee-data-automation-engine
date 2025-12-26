@@ -1,0 +1,13 @@
+missing_values:
+  columns:
+    - name: "age"
+      strategy: "mean"
+    - name: "gender"
+      strategy: "mode"
+    - name: "salary"
+      strategy: "constant"
+      fill_value: 0
+
+duplicates:
+  subset: ["id", "email"]
+  keep: "first"
