@@ -16,14 +16,14 @@ from engine.report_generator import FinalReportGenerator
 from engine.config_loader import ConfigLoader
 from engine.logger import get_logger
 
-logger = get_logger("CLI")
+logger = get_logger("CLI-BATCH")
 
-def run_diagnostic(data_path: str, config_path: str):
-    logger.info(f"Starting diagnostic for {data_path}")
+SUPPORTED_EXT = {".csv", ".xlsx", ".xls"}
 
-    config = ConfigLoader(config_path)
+def run_single_file(file_path: Path, config: ConfigLoader, output_dir: Path):
+    logger.info(f"Processing file: {file_path.name}")
 
-    df = load_dataset(data_path)
+    df = load_dataset(str(file_path))
 
     diagnostics = {
         "missing": detect_missing(df),
@@ -33,7 +33,6 @@ def run_diagnostic(data_path: str, config_path: str):
     }
 
     summary = build_summary(diagnostics)
-
     scores = score_dataset(df, diagnostics, config)
     risk = scores["risk"]
 
@@ -46,7 +45,7 @@ def run_diagnostic(data_path: str, config_path: str):
     ).generate()
 
     report = FinalReportGenerator(
-        dataset_name=Path(data_path).name,
+        dataset_name=file_path.name,
         summary=summary,
         scores=scores,
         risk=risk,
@@ -54,24 +53,25 @@ def run_diagnostic(data_path: str, config_path: str):
         recommendations=recommendations
     )
 
-    output_path = Path("reports/markdown/final_report.md")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"{file_path.stem}_report.md"
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report.generate_markdown())
 
-    logger.info("Diagnostic completed successfully")
-    print(f"✅ Report generated at: {output_path}")
+    logger.info(f"Finished file: {file_path.name}")
+    return output_path
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Raw Data Diagnostic Engine"
+        description="Batch Raw Data Diagnostic Engine"
     )
 
     parser.add_argument(
-        "--data",
+        "--data-dir",
         required=True,
-        help="Path to dataset file (CSV or Excel)"
+        help="Directory containing dataset files"
     )
 
     parser.add_argument(
@@ -81,7 +81,35 @@ def main():
     )
 
     args = parser.parse_args()
-    run_diagnostic(args.data, args.config)
+
+    data_dir = Path(args.data_dir)
+    output_dir = Path("reports/markdown/batch")
+
+    config = ConfigLoader(args.config)
+
+    files = [
+        f for f in data_dir.iterdir()
+        if f.is_file() and f.suffix.lower() in SUPPORTED_EXT
+    ]
+
+    if not files:
+        logger.warning("No supported data files found")
+        print(" No dataset files found")
+        return
+
+    success, failed = 0, 0
+
+    for file_path in files:
+        try:
+            run_single_file(file_path, config, output_dir)
+            success += 1
+        except Exception as e:
+            failed += 1
+            logger.error(f"Failed processing {file_path.name}: {e}")
+
+    print(f" Batch completed: {success} success, {failed} failed")
+    logger.info(f"Batch finished: {success} success, {failed} failed")
+
 
 if __name__ == "__main__":
     main()

@@ -1,34 +1,26 @@
 import pandas as pd
 
-class MissingValueDiagnostic:
+def detect_missing(df: pd.DataFrame) -> dict:
     """
-    Mendeteksi dan melaporkan missing value per kolom
-    tanpa mengubah data asli.
+    Menghitung missing value per kolom.
+    Tidak menyimpan state.
+    Tidak mengubah data.
     """
 
-    def __init__(self, df: pd.DataFrame):
-        self.df = df
+    total_rows = len(df)
 
-    def analyze(self) -> pd.DataFrame:
-        total_rows = len(self.df)
+    result = {}
 
-        report = (
-            self.df.isnull()
-            .sum()
-            .reset_index()
-            .rename(columns={
-                "index": "column_name",
-                0: "missing_count"
-            })
+    for col in df.columns:
+        missing_count = int(df[col].isnull().sum())
+        missing_pct = round(
+            (missing_count / total_rows * 100) if total_rows > 0 else 0,
+            2
         )
 
-        report["missing_percentage"] = (
-            report["missing_count"] / total_rows * 100
-        ).round(2)
+        result[col] = {
+            "missing_count": missing_count,
+            "missing_percentage": missing_pct
+        }
 
-        report = report.sort_values(
-            by="missing_percentage",
-            ascending=False
-        )
-
-        return report
+    return result

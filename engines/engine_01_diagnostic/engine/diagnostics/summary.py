@@ -1,50 +1,51 @@
-import pandas as pd
 from typing import Dict
 
 
 class SummaryDiagnostic:
     """
-    Menggabungkan hasil diagnostic menjadi ringkasan terpadu.
-    Tidak mengambil keputusan, hanya menyatukan fakta.
+    Menggabungkan hasil diagnostic menjadi ringkasan fakta tingkat dataset.
+    Tidak menganalisis ulang dan tidak mengambil keputusan.
     """
 
-    def __init__(
-        self,
-        missing_report: pd.DataFrame,
-        duplicate_report: Dict,
-        schema_report: pd.DataFrame,
-        encoding_report: pd.DataFrame,
-    ):
-        self.missing_report = missing_report
-        self.duplicate_report = duplicate_report
-        self.schema_report = schema_report
-        self.encoding_report = encoding_report
+    def __init__(self, diagnostics: Dict):
+        """
+        diagnostics: dict berisi hasil diagnostic mentah
+        dari masing-masing modul.
+        """
+        self.diagnostics = diagnostics
 
     def generate(self) -> Dict:
         return {
-            "missing": {
-                "total_columns": int(self.missing_report.shape[0]),
-                "columns_with_missing": int(
-                    (self.missing_report["missing_count"] > 0).sum()
-                ),
-                "max_missing_percentage": float(
-                    self.missing_report["missing_percentage"].max()
-                ),
-            },
-            "duplicate": self.duplicate_report,
-            "schema": {
-                "total_columns": int(self.schema_report.shape[0]),
-                "object_columns": int(
-                    (self.schema_report["data_type"] == "object").sum()
-                ),
-            },
-            "encoding": {
-                "columns_checked": int(self.encoding_report.shape[0]),
-                "columns_with_non_ascii": int(
-                    (self.encoding_report["non_ascii_count"] > 0).sum()
-                ),
-                "max_non_ascii_percentage": float(
-                    self.encoding_report["non_ascii_percentage"].max()
-                ) if not self.encoding_report.empty else 0.0,
-            },
+            "missing": self._summarize_missing(),
+            "duplicate": self.diagnostics.get("duplicate", {}),
+            "schema": self._summarize_schema(),
+            "encoding": self._summarize_encoding(),
+        }
+
+    def _summarize_missing(self) -> Dict:
+        data = self.diagnostics.get("missing", {})
+
+        return {
+            "total_columns": data.get("total_columns", 0),
+            "columns_with_missing": data.get("columns_with_missing", 0),
+            "max_missing_percentage": data.get("max_missing_percentage", 0.0),
+        }
+
+    def _summarize_schema(self) -> Dict:
+        data = self.diagnostics.get("schema", {})
+
+        return {
+            "total_columns": data.get("total_columns", 0),
+            "object_columns": data.get("object_columns", 0),
+        }
+
+    def _summarize_encoding(self) -> Dict:
+        data = self.diagnostics.get("encoding", {})
+
+        return {
+            "columns_checked": data.get("columns_checked", 0),
+            "columns_with_non_ascii": data.get("columns_with_non_ascii", 0),
+            "max_non_ascii_percentage": data.get(
+                "max_non_ascii_percentage", 0.0
+            ),
         }
