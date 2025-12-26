@@ -55,3 +55,30 @@ class ColumnQualityScorer:
             by="quality_score",
             ascending=False
         )
+
+
+# DAY 10 — DATASET LEVEL
+
+class DatasetQualityScorer:
+    """
+    Menghitung skor kualitas dataset secara keseluruhan
+    berdasarkan skor kualitas tiap kolom.
+    """
+
+    def __init__(self, column_score_df: pd.DataFrame):
+        self.column_score_df = column_score_df
+
+    def score(self) -> dict:
+        if self.column_score_df.empty:
+            raise ValueError(
+                "Column score kosong. Tidak bisa menghitung dataset score."
+            )
+
+        avg_score = self.column_score_df["quality_score"].mean()
+        min_score = self.column_score_df["quality_score"].min()
+
+        return {
+            "dataset_quality_score": round(avg_score, 2),
+            "worst_column_score": int(min_score),
+            "total_columns": int(self.column_score_df.shape[0])
+        }
