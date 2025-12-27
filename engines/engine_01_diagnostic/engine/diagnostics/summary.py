@@ -3,49 +3,39 @@ from typing import Dict
 
 class SummaryDiagnostic:
     """
-    Menggabungkan hasil diagnostic menjadi ringkasan fakta tingkat dataset.
-    Tidak menganalisis ulang dan tidak mengambil keputusan.
+    Menggabungkan seluruh hasil diagnostic
+    menjadi ringkasan yang mudah dibaca.
     """
 
-    def __init__(self, diagnostics: Dict):
-        """
-        diagnostics: dict berisi hasil diagnostic mentah
-        dari masing-masing modul.
-        """
+    def __init__(self, diagnostics: Dict[str, dict]):
         self.diagnostics = diagnostics
 
-    def generate(self) -> Dict:
-        return {
-            "missing": self._summarize_missing(),
-            "duplicate": self.diagnostics.get("duplicate", {}),
-            "schema": self._summarize_schema(),
-            "encoding": self._summarize_encoding(),
-        }
+    def analyze(self) -> dict:
+        issues = []
 
-    def _summarize_missing(self) -> Dict:
-        data = self.diagnostics.get("missing", {})
+        if self.diagnostics.get("missing", {}).get("has_missing"):
+            issues.append("Missing values detected")
 
-        return {
-            "total_columns": data.get("total_columns", 0),
-            "columns_with_missing": data.get("columns_with_missing", 0),
-            "max_missing_percentage": data.get("max_missing_percentage", 0.0),
-        }
+        if self.diagnostics.get("duplicate", {}).get("has_duplicate"):
+            issues.append("Duplicate rows detected")
 
-    def _summarize_schema(self) -> Dict:
-        data = self.diagnostics.get("schema", {})
+        if self.diagnostics.get("schema", {}).get("inconsistent_naming"):
+            issues.append("Schema inconsistency detected")
+
+        if self.diagnostics.get("encoding", {}).get("has_encoding_issue"):
+            issues.append("Encoding issues detected")
 
         return {
-            "total_columns": data.get("total_columns", 0),
-            "object_columns": data.get("object_columns", 0),
+            "total_checks": len(self.diagnostics),
+            "issues_found": issues,
+            "has_issue": len(issues) > 0,
         }
 
-    def _summarize_encoding(self) -> Dict:
-        data = self.diagnostics.get("encoding", {})
 
-        return {
-            "columns_checked": data.get("columns_checked", 0),
-            "columns_with_non_ascii": data.get("columns_with_non_ascii", 0),
-            "max_non_ascii_percentage": data.get(
-                "max_non_ascii_percentage", 0.0
-            ),
-        }
+# PUBLIC ENGINE API (WAJIB ADA)
+def generate_summary(diagnostics: Dict[str, dict]) -> dict:
+    """
+    Public facade untuk summary diagnostic.
+    """
+    summary = SummaryDiagnostic(diagnostics)
+    return summary.analyze()

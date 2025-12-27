@@ -1,0 +1,5 @@
+reports/csv/*.csv
+reports/csv/batch/*.csv
+reports/markdown/*.md
+reports/markdown/batch/*.md
+logs/*.log

@@ -1,40 +1,38 @@
 import pandas as pd
-import re
 
 
 class EncodingDiagnostic:
     """
-    Mendeteksi potensi masalah encoding dengan mencari
-    karakter non-ASCII dan simbol aneh pada kolom object/string.
+    Mendeteksi potensi masalah encoding
+    pada kolom bertipe object/string.
     """
-
-    NON_ASCII_PATTERN = re.compile(r"[^\x00-\x7F]")
 
     def __init__(self, df: pd.DataFrame):
         self.df = df
 
-    def analyze(self) -> pd.DataFrame:
-        object_columns = self.df.select_dtypes(include=["object"]).columns
+    def analyze(self) -> dict:
+        encoding_issues = []
 
-        records = []
+        for col in self.df.select_dtypes(include=["object"]).columns:
+            try:
+                # coba encode-decode sederhana
+                self.df[col].astype(str).str.encode("utf-8")
+            except Exception:
+                encoding_issues.append(col)
 
-        for col in object_columns:
-            series = self.df[col].dropna().astype(str)
+        return {
+            "string_columns": list(
+                self.df.select_dtypes(include=["object"]).columns
+            ),
+            "encoding_issue_columns": encoding_issues,
+            "has_encoding_issue": len(encoding_issues) > 0,
+        }
 
-            non_ascii_count = series.apply(
-                lambda x: bool(self.NON_ASCII_PATTERN.search(x))
-            ).sum()
 
-            records.append({
-                "column_name": col,
-                "non_ascii_count": int(non_ascii_count),
-                "total_non_null": int(series.shape[0]),
-                "non_ascii_percentage": round(
-                    (non_ascii_count / series.shape[0]) * 100, 2
-                ) if series.shape[0] > 0 else 0.0
-            })
-
-        return pd.DataFrame(records).sort_values(
-            by="non_ascii_percentage",
-            ascending=False
-        )
+# PUBLIC ENGINE API (WAJIB)
+def detect_encoding(df: pd.DataFrame) -> dict:
+    """
+    Public facade untuk encoding diagnostic.
+    """
+    diagnostic = EncodingDiagnostic(df)
+    return diagnostic.analyze()

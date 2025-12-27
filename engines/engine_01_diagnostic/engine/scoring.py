@@ -2,11 +2,17 @@ import pandas as pd
 from engine.quality_metrics import DataQualityMetrics
 
 
+# =====================================================
+# COLUMN LEVEL SCORING
+# =====================================================
+
 class ColumnQualityScorer:
     """
-    Menghitung skor kualitas per kolom berdasarkan
-    missing value dan encoding risk.
-    Skor 0–100 (semakin tinggi semakin baik).
+    Menghitung skor kualitas per kolom berdasarkan:
+    - missing value
+    - encoding risk
+
+    Skor 0–100 (semakin tinggi semakin baik)
     """
 
     def __init__(
@@ -32,13 +38,11 @@ class ColumnQualityScorer:
 
             score = 100
 
-            # Missing value penalty
             if missing_pct >= DataQualityMetrics.MISSING_VALUE.critical:
                 score -= 40
             elif missing_pct >= DataQualityMetrics.MISSING_VALUE.warning:
                 score -= 20
 
-            # Encoding penalty
             if encoding_pct >= DataQualityMetrics.ENCODING_ISSUE.critical:
                 score -= 30
             elif encoding_pct >= DataQualityMetrics.ENCODING_ISSUE.warning:
@@ -51,18 +55,21 @@ class ColumnQualityScorer:
                 "quality_score": max(score, 0)
             })
 
-        return pd.DataFrame(scores).sort_values(
-            by="quality_score",
-            ascending=False
+        return (
+            pd.DataFrame(scores)
+            .sort_values(by="quality_score", ascending=False)
+            .reset_index(drop=True)
         )
 
 
-# DAY 10 — DATASET LEVEL
+# =====================================================
+# DATASET LEVEL SCORING
+# =====================================================
 
 class DatasetQualityScorer:
     """
     Menghitung skor kualitas dataset secara keseluruhan
-    berdasarkan skor kualitas tiap kolom.
+    berdasarkan skor kualitas tiap kolom
     """
 
     def __init__(self, column_score_df: pd.DataFrame):
@@ -70,15 +77,90 @@ class DatasetQualityScorer:
 
     def score(self) -> dict:
         if self.column_score_df.empty:
-            raise ValueError(
-                "Column score kosong. Tidak bisa menghitung dataset score."
-            )
-
-        avg_score = self.column_score_df["quality_score"].mean()
-        min_score = self.column_score_df["quality_score"].min()
+            raise ValueError("Column score kosong.")
 
         return {
-            "dataset_quality_score": round(avg_score, 2),
-            "worst_column_score": int(min_score),
+            "dataset_quality_score": round(
+                self.column_score_df["quality_score"].mean(), 2
+            ),
+            "worst_column_score": int(
+                self.column_score_df["quality_score"].min()
+            ),
             "total_columns": int(self.column_score_df.shape[0])
         }
+
+
+def classify_risk(score: float) -> str:
+    if score >= 85:
+        return "LOW"
+    elif score >= 65:
+        return "MEDIUM"
+    return "HIGH"
+
+
+# =====================================================
+# PUBLIC FACADE (CLI ENTRY POINT)
+# =====================================================
+
+def score_dataset(
+    df: pd.DataFrame,
+    diagnostics: dict,
+    config: dict | None = None
+) -> dict:
+    """
+    Facade function:
+    diagnostics → column scoring → dataset scoring → risk
+    """
+
+    missing_report = diagnostics.get("missing")
+    encoding_report = diagnostics.get("encoding")
+
+    if missing_report is None:
+        raise ValueError("Missing report tidak ditemukan")
+
+    # Normalize missing
+    if isinstance(missing_report, dict):
+        missing_report = pd.DataFrame([
+            {
+                "column_name": col,
+                "missing_percentage": (
+                    info["missing_percentage"]
+                    if isinstance(info, dict)
+                    else info
+                )
+            }
+            for col, info in missing_report.items()
+        ])
+
+    # Normalize encoding
+    if encoding_report is None:
+        encoding_report = pd.DataFrame(
+            columns=["column_name", "non_ascii_percentage"]
+        )
+    elif isinstance(encoding_report, dict):
+        encoding_report = pd.DataFrame([
+            {
+                "column_name": col,
+                "non_ascii_percentage": pct
+            }
+            for col, pct in encoding_report.items()
+        ])
+
+    column_scores = ColumnQualityScorer(
+        missing_report=missing_report,
+        encoding_report=encoding_report
+    ).score()
+
+    dataset_score = DatasetQualityScorer(
+        column_scores
+    ).score()
+
+    risk_level = classify_risk(
+        dataset_score["dataset_quality_score"]
+    )
+
+    return {
+        "dataset_score": dataset_score,
+        "risk": risk_level,
+        "column_scores": column_scores
+    }
