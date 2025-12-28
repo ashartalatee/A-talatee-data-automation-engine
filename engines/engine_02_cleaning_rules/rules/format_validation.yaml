@@ -1,0 +1,16 @@
+date_format:
+  columns:
+    - name: "date_column"
+      format: "%Y-%m-%d"        # target format
+      coerce_errors: true        # convert invalid date to NaT
+
+numeric_validation:
+  columns:
+    - name: "age"
+      min: 0
+      max: 120
+      allow_null: false
+    - name: "salary"
+      min: 0
+      max: null                  # tidak ada max
+      allow_null: true
