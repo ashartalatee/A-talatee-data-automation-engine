@@ -1,8 +1,9 @@
 import pandas as pd
-from clean_missing import clean_missing
-from clean_duplicates import remove_duplicates, standardize_columns
-from clean_format import validate_dates, validate_numeric
-from utils import setup_logger, log_rule, generate_report
+from src.clean_missing import clean_missing
+from src.clean_duplicates import remove_duplicates, standardize_columns
+from src.clean_format import validate_dates, validate_numeric
+from src.clean_text import clean_text
+from src.utils import setup_logger, log_rule, generate_report
 
 class CleaningEngine:
     def __init__(self, df):
@@ -28,11 +29,18 @@ class CleaningEngine:
         self.df = validate_numeric(self.df)
         log_rule("validate_format", "Date & numeric validated")
         generate_report(df_before, self.df, "validate_format")
+
+    def run_text(self):
+        df_before = self.df.copy()
+        self.df = clean_text(self.df)
+        log_rule("clean_text", "Text normalization & mapping applied")
+        generate_report(df_before, self.df, "clean_text")
     
     def run_all(self):
         self.run_missing()
         self.run_duplicates()
         self.run_format()
+        self.run_text()
     
     def get_cleaned_data(self):
         return self.df

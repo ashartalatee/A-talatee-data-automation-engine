@@ -1,0 +1,7 @@
+rule,rows_before,rows_after,columns_before,columns_after,missing_before,missing_after
+clean_missing,5,5,6,6,0,0
+clean_duplicates,5,5,6,6,0,0
+clean_missing,5,5,6,6,0,0
+clean_duplicates,5,5,6,6,0,0
+clean_missing,5,5,6,6,0,0
+clean_duplicates,5,5,6,6,0,0

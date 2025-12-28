@@ -1,0 +1,11 @@
+client_name: "Client_A"
+
+apply_rules:
+  missing: true
+  duplicates: true
+  format: true
+  text_cleaning: false
+
+dataset:
+  input_path: "sample_data/client_a_raw.csv"
+  output_path: "sample_data/client_a_cleaned.csv"

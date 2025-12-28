@@ -1,0 +1,14 @@
+text_cleaning:
+  normalize:
+    lowercase: true
+    strip_whitespace: true
+
+  columns:
+    - name: "gender"
+      mapping:
+        male: ["male", "m", "laki-laki", "pria"]
+        female: ["female", "f", "perempuan", "wanita"]
+
+    - name: "country"
+      mapping:
+        indonesia: ["indonesia", "indo", "idn"]

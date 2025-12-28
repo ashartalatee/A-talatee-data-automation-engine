@@ -1,0 +1,6 @@
+id,email,age,gender,salary,join_date
+1,user1@email.com,25,male,5000000,2024-01-15
+2,user2@email.com,30,female,4500000,2024-02-01
+3,user3@email.com,28,female,0,2024-03-10
+4,user4@email.com,35,male,7000000,2024-01-20
+5,user5@email.com,40,female,6000000,2024-04-05
